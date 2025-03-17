@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Modal Calculator Repository Viewer</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+  <style>
+    :root {
+      --primary-color: #3498db;
+      --secondary-color: #2c3e50;
+      --bg-light: #f8f9fa;
+      --bg-dark: #343a40;
+      --border-color: #dee2e6;
+      --hover-color: #e9ecef;
+      --code-bg: #f6f8fa;
+      --text-color: #212529;
+      --text-light: #6c757d;
+      --transition-speed: 0.3s;
+    }
+
+    [data-theme="dark"] {
+      --primary-color: #4da8ff;
+      --secondary-color: #1a1a1a;
+      --bg-light: #2d2d2d;
+      --bg-dark: #1a1a1a;
+      --border-color: #404040;
+      --hover-color: #404040;
+      --code-bg: #1e1e1e;
+      --text-color: #e0e0e0;
+      --text-light: #a0a0a0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      transition: background-color var(--transition-speed), color var(--transition-speed);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      color: var(--text-color);
+      background-color: var(--bg-light);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Enhanced Header */
+    header {
+      background-color: var(--secondary-color);
+      color: white;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      height: 60px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      gap: 1rem;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-left: auto;
+    }
+
+    /* Improved Search */
+    .search-bar {
+      position: relative;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 0.5rem;
+      min-width: 240px;
+    }
+
+    .search-bar input {
+      background: transparent;
+      border: none;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      width: 100%;
+      font-size: 0.9rem;
+    }
+
+    /* File Tree Enhancements */
+    #fileTree {
+      position: relative;
+      padding: 0.5rem 0;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+
+    .tree-node {
+      position: relative;
+      padding-left: 1.5rem;
+    }
+
+    .tree-node::before {
+      content: '';
+      position: absolute;
+      left: 0.5rem;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background-color: var(--border-color);
+    }
+
+    .tree-toggle {
+      position: absolute;
+      left: -0.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      width: 1rem;
+      height: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Enhanced Code Viewer */
+    .code-container {
+      position: relative;
+      background: var(--code-bg);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin: 1rem 0;
+      overflow: hidden;
+    }
+
+    .code-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      padding: 0.5rem;
+      background: rgba(0, 0, 0, 0.05);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    /* Advanced Analysis Panel */
+    #analysis {
+      padding: 1rem;
+      background: var(--bg-light);
+      border-top: 1px solid var(--border-color);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+
+    .analysis-card {
+      background: var(--bg-light);
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Modern Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+      background: var(--bg-light);
+      padding: 2rem;
+      border-radius: 12px;
+      width: min(90%, 800px);
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Responsive Enhancements */
+    @media (max-width: 768px) {
+      #sidebar {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        top: 60px;
+        z-index: 100;
+        box-shadow: 4px 0 8px rgba(0, 0, 0, 0.1);
+      }
+
+      #sidebar.collapsed {
+        transform: translateX(-100%);
+        width: 300px;
+      }
+
+      .header h1 {
+        max-width: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Multi-Modal Calculator</h1>
+    <div class="header-controls">
+      <button id="themeToggle" class="icon-button" title="Toggle theme" type="button">🌓</button>
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search files..." autocomplete="off">
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="sidebar">
+      <div class="tree-header">
+        <span>Repository Explorer</span>
+        <button class="icon-button" id="toggleSidebar" title="Toggle sidebar" type="button">🗁</button>
+      </div>
+      <div id="fileTree"></div>
+      <div id="analysis">
+        <div class="analysis-card">
+          <h4>Repository Stats</h4>
+          <div id="analysisStats"></div>
+        </div>
+        <div class="analysis-card">
+          <h4>File Types</h4>
+          <div id="fileTypesChart"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="main-content">
+      <div class="file-header">
+        <div class="file-meta">
+          <h2 id="fileTitle">Welcome</h2>
+          <span class="file-path" id="filePath"></span>
+        </div>
+        <div class="file-actions">
+          <button id="copyButton" class="icon-button" title="Copy content" type="button">⎘</button>
+          <button id="downloadButton" class="icon-button" title="Download file" type="button">⤓</button>
+          <button id="infoButton" class="icon-button" title="Repository info" type="button">ⓘ</button>
+        </div>
+      </div>
+      <div id="content">
+        <div class="code-container">
+          <div class="code-toolbar">
+            <button id="wrapToggle" class="icon-button" title="Toggle word wrap" type="button">↔</button>
+            <select id="languageSelect" class="code-select" title="Select language">
+              <option value="auto">Detect Language</option>
+              <option value="python">Python</option>
+              <option value="javascript">JavaScript</option>
+              <option value="markdown">Markdown</option>
+            </select>
+          </div>
+          <pre><code id="codeContent"></code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Info Modal -->
+  <div class="modal" id="infoModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Repository Details</h3>
+        <button class="close-modal" id="closeModal" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-section">
+          <h4>Metadata</h4>
+          <div class="modal-grid">
+            <div>Name:</div><div>multi-modal-calculator</div>
+            <div>Owner:</div><div>Exios66</div>
+            <div>Version:</div><div>1.2.0</div>
+            <div>License:</div><div>MIT</div>
+          </div>
+        </div>
+        <div class="modal-section">
+          <h4>Dependencies</h4>
+          <ul class="dependency-list">
+            <li>Python 3.10+</li>
+            <li>TensorFlow 2.12</li>
+            <li>OpenCV 4.7</li>
+            <li>PyTorch 2.0</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>
+    class RepositoryViewer {
+      constructor() {
+        this.repoStructure = { /* ... */ };
+        this.init();
+      }
+
+      init() {
+        this.initTheme();
+        this.initEventListeners();
+        this.renderTree();
+        this.initHighlightJS();
+        this.analyzeRepository();
+      }
+
+      initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+
+      initEventListeners() {
+        // Event listeners with proper cleanup considerations
+        const delegate = (selector, fn) => (e) => {
+          if (e.target.closest(selector)) fn(e);
+        };
+
+        document.addEventListener('click', delegate('[data-action="toggle-node"]', this.toggleNode));
+        document.getElementById('themeToggle').addEventListener('click', this.toggleTheme);
+        document.getElementById('searchInput').addEventListener('input', 
+          this.debounce(this.filterTree, 300));
+        // ... other event listeners
+      }
+
+      toggleTheme = () => {
+        const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+      }
+
+      renderTree() {
+        // Virtual DOM implementation for efficient rendering
+        const renderNode = (node) => `
+          <li class="${node.type}">
+            <div class="tree-node">
+              ${node.children ? `<span class="tree-toggle" data-action="toggle-node">▶</span>` : ''}
+              <span class="node-icon">${this.getIcon(node)}</span>
+              <span class="node-name">${node.name}</span>
+              ${node.children ? this.renderChildren(node.children) : ''}
+            </div>
+          </li>
+        `;
+        // ... rest of tree rendering logic
+      }
+
+      analyzeRepository() {
+        // Enhanced analysis with file type detection and size metrics
+        const analysis = {
+          fileTypes: new Map(),
+          totalSize: 0,
+          lastModified: null,
+          dependencies: new Set()
+        };
+
+        const traverse = (node) => {
+          if (node.type === 'file') {
+            const type = node.name.split('.').pop();
+            analysis.fileTypes.set(type, (analysis.fileTypes.get(type) || 0) + 1);
+            analysis.totalSize += node.content?.length || 0;
+          }
+          // ... rest of analysis logic
+        };
+
+        traverse(this.repoStructure);
+        this.displayAnalysis(analysis);
+      }
+
+      debounce(fn, delay) {
+        let timeout;
+        return (...args) => {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => fn.apply(this, args), delay);
+        };
+      }
+
+      initHighlightJS() {
+        hljs.configure({
+          languages: ['python', 'javascript', 'markdown'],
+          useBR: false,
+          tabReplace: '  '
+        });
+      }
+
+      handleError(error, context = '') {
+        console.error(`[${new Date().toISOString()}] ERROR in ${context}:`, error);
+        this.displayErrorOverlay(`System Error: ${error.message}`);
+        this.logToRemote('error', {
+          error: error.stack,
+          context,
+          state: this.serializeState()
+        });
+      }
+
+      performanceMonitor() {
+        const perfData = new WeakMap();
+        return {
+          start: (key) => perfData.set(key, performance.now()),
+          end: (key) => {
+            const end = performance.now();
+            const start = perfData.get(key);
+            if (start) {
+              const duration = end - start;
+              if (duration > 100) {
+                console.warn(`Performance warning: ${key} took ${duration.toFixed(2)}ms`);
+              }
+              return duration;
+            }
+            return null;
+          }
+        };
+      }
+
+      initCache() {
+        this.cache = new Map();
+        this.cacheTTL = new Map();
+        this.cacheCleanupInterval = setInterval(() => {
+          const now = Date.now();
+          this.cacheTTL.forEach((expiry, key) => {
+            if (now > expiry) {
+              this.cache.delete(key);
+              this.cacheTTL.delete(key);
+            }
+          });
+        }, 60000);
+      }
+
+      serializeState() {
+        return JSON.stringify({
+          repoStructure: this.repoStructure,
+          viewState: {
+            currentFile: this.currentFile,
+            scrollPosition: window.scrollY,
+            theme: document.documentElement.dataset.theme
+          },
+          cacheState: Array.from(this.cache.entries())
+        });
+      }
+
+      restoreState(state) {
+        try {
+          const parsed = JSON.parse(state);
+          this.repoStructure = parsed.repoStructure;
+          this.currentFile = parsed.viewState.currentFile;
+          document.documentElement.dataset.theme = parsed.viewState.theme;
+          this.cache = new Map(parsed.cacheState);
+          requestAnimationFrame(() => {
+            window.scrollTo(0, parsed.viewState.scrollPosition);
+          });
+        } catch (e) {
+          this.handleError(e, 'state restoration');
+        }
+      }
+
+      initEventListeners() {
+        const resizeHandler = this.debounce(() => {
+          this.adjustLayout();
+          this.saveViewState();
+        }, 200);
+        
+        window.addEventListener('resize', resizeHandler);
+        window.addEventListener('beforeunload', () => {
+          localStorage.setItem('repoViewerState', this.serializeState());
+        });
+        
+        // Memory leak prevention
+        this.cleanupHandlers.push(() => {
+          window.removeEventListener('resize', resizeHandler);
+        });
+      }
+
+      adjustLayout() {
+        const container = document.querySelector('.container');
+        const headerHeight = document.querySelector('header').offsetHeight;
+        container.style.height = `calc(100vh - ${headerHeight}px)`;
+        this.codeViewer.refresh();
+      }
+
+      initAccessibility() {
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Tab') {
+            this.focusTrap(e);
+          }
+        });
+        
+        this.applyARIALabels();
+        this.setupFocusTraps();
+      }
+
+      applyARIALabels() {
+        document.querySelectorAll('[data-aria-label]').forEach(el => {
+          el.setAttribute('aria-label', el.dataset.ariaLabel);
+        });
+      }
+
+      setupFocusTraps() {
+        this.modalFocusTrap = focusTrap.createFocusTrap('#modal', {
+          escapeDeactivates: false,
+          clickOutsideDeactivates: true
+        });
+      }
+
+      trackHistory(action) {
+        this.history = this.history || [];
+        this.history.push({
+          timestamp: Date.now(),
+          action,
+          state: this.serializeState()
+        });
+        
+        // Keep history to last 100 actions
+        if (this.history.length > 100) {
+          this.history.shift();
+        }
+      }
+
+      validateInput(input, type = 'generic') {
+        const validators = {
+          filename: /^[\w\-\. ]+$/,
+          path: /^[\/\w\-\. ]+$/,
+          content: (text) => text.length < 1000000 // 1MB limit
+        };
+        
+        if (typeof validators[type] === 'function') {
+          return validators[type](input);
+        }
+        return validators[type].test(input);
+      }
+
+      sanitizeHTML(content) {
+        const temp = document.createElement('div');
+        temp.textContent = content;
+        return temp.innerHTML;
+      }
+
+      destroy() {
+        this.cleanupHandlers.forEach(cleanup => cleanup());
+        clearInterval(this.cacheCleanupInterval);
+        this.modalFocusTrap.deactivate();
+        window.viewer = null;
+      }
+    }
+
+    // Initialize application
+    document.addEventListener('DOMContentLoaded', () => {
+      const viewer = new RepositoryViewer();
+      window.viewer = viewer; // For debugging
+    });
+  </script>
+</body>
+</html>
